@@ -3,42 +3,26 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-// Initialize Groq client
 const groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
 
-// 🔍 Validate Input
 const validateTravelData = (data) => {
   const { origin, destination, timing, guests, budget_limit } = data;
-
   if (!origin || !destination || !timing || !guests || !budget_limit) {
     throw new Error("Missing required travel data fields.");
   }
-
   if (!guests.adult && !guests.child) {
     throw new Error("At least one guest is required.");
   }
 };
 
-// 🚀 Main Function
 export const getTravelItinerary = async (travelData) => {
   try {
     validateTravelData(travelData);
 
-    const {
-      origin,
-      destination,
-      timing,
-      guests,
-      budget_limit,
-      language = "English",
-    } = travelData;
-
+    const { origin, destination, timing, guests, budget_limit, language = "English" } = travelData;
     const totalGuests = (guests.adult || 0) + (guests.child || 0);
 
-    // 🧠 ADVANCED TABLE-FORCING PROMPT
-// File: src/services/llm.service.js (Only the prompt part)
-
-    // 🧠 NEW CLEAN FORMAT PROMPT
+    // 🧠 ADVANCED PROMPT WITH PACKING ESSENTIALS
     const prompt = `
 You are TravelGenieAi, an enthusiastic and highly knowledgeable local tourist guide.
 
@@ -51,28 +35,37 @@ Traveler Details:
 
 CRITICAL INSTRUCTIONS:
 You MUST create a detailed day-by-day itinerary. 
-Do NOT use tables. Write in a clean, engaging, and premium travel blog style.
+Do NOT use tables. Write in a clean, engaging, and premium travel blog style using bullet points.
+
+CRITICAL FORMATTING RULE: You MUST **bold** the names of all specific locations, cafes, restaurants, monuments, beaches, and landmarks mentioned in your text.
 
 Format EXACTLY like this for each day:
 ## Day 1: [Exciting Title for the Day]
-* **🌅 Morning:** [Descriptive activity and food suggestions, 2-3 lines]
-* **☀️ Afternoon:** [Descriptive activity and food suggestions, 2-3 lines]
-* **🌙 Evening:** [Descriptive activity and food suggestions, 2-3 lines]
-* **💡 Local Secret:** [A hidden gem or pro-tip]
+* **🌅 Morning:** [Write 3 to 4 LONG, descriptive sentences. Detail the atmosphere, what to do, what to see, and specifically name local food/cafes to try. Remember to **bold** locations. Do NOT be brief.]
+* **☀️ Afternoon:** [Write 3 to 4 LONG, descriptive sentences. Include specific travel routes, local interactions, and immersive details. Remember to **bold** locations. Do NOT be brief.]
+* **🌙 Evening:** [Write 3 to 4 LONG, descriptive sentences. Focus on relaxing activities, sunset spots, and dinner recommendations. Remember to **bold** locations. Do NOT be brief.]
+* **💡 Local Secret:** [Write a highly detailed 2-3 sentence hidden gem or pro-tip that only locals know. **Bold** the specific hidden location.]
 
-After completing all days, provide:
+After the last day, you MUST provide a smart packing list strictly tailored to the vibe and weather of ${destination}:
+## 🎒 Packing Essentials
+* **[Essential Item 1]:** [Why it is strictly needed for ${destination}]
+* **[Essential Item 2]:** [Why it is strictly needed for ${destination}]
+* **[Essential Item 3]:** [Why it is strictly needed for ${destination}]
+* **[Essential Item 4]:** [Why it is strictly needed for ${destination}]
+
+After the packing list, provide EXACTLY this heading for budget:
 ## 💰 Budget Breakdown
 - Transport: ...
 - Stay: ...
 - Food & Activities: ...
 
-Respond in ${language}. Make the text sound human and exciting!
+Respond in ${language}. Make the text sound deeply descriptive, human, and exciting! Never write short or fragmented sentences.
 `;
 
     const messages = [
       {
         role: "system",
-        content: "You are a precise AI travel planner that strictly follows formatting rules and always outputs daily schedules in Markdown tables.",
+        content: "You are a precise AI travel planner that strictly follows formatting rules. You must NEVER use tables. Only output clean bullet points.",
       },
       {
         role: "user",
@@ -80,34 +73,43 @@ Respond in ${language}. Make the text sound human and exciting!
       },
     ];
 
-    // Llama 3.3 70B is Groq's most powerful and fast free model
-    const model = "llama-3.3-70b-versatile"; 
-    console.log(`🤖 Sending request to Groq using model: ${model}`);
+    const fallbackModels = [
+      "llama-3.1-8b-instant",      
+      "mixtral-8x7b-32768",        
+      "llama-3.3-70b-versatile"    
+    ];
 
-    // 🔁 Call Groq API
-    const completion = await groq.chat.completions.create({
-      model: model,
-      messages: messages,
-      temperature: 0.5, // Thoda kam kiya taaki format strict rahe
-      max_tokens: 2000,
-    });
+    let responseContent = null;
+    let successfulModel = "";
 
-    const response =
-      completion.choices[0]?.message?.content ||
-      "No itinerary generated.";
+    for (const model of fallbackModels) {
+      try {
+        console.log(`🤖 Trying Groq model: ${model}...`);
+        const completion = await groq.chat.completions.create({
+          model: model,
+          messages: messages,
+          temperature: 0.5, 
+          max_tokens: 2000,
+        });
 
-    console.log("📤 Response generated successfully via Groq!");
+        responseContent = completion.choices[0]?.message?.content;
+        successfulModel = model;
+        break; 
+      } catch (err) {
+        console.warn(`⚠️ Model ${model} failed. Trying next...`);
+      }
+    }
 
-    return response;
+    if (!responseContent) {
+      throw new Error("All AI models are currently overloaded. Please try again.");
+    }
+
+    console.log(`✅ Response generated successfully using: ${successfulModel}`);
+    return responseContent;
+
   } catch (error) {
     console.error("❌ Groq Service Error:", error);
-
-    const errorMessage =
-      error?.response?.data?.error?.message ||
-      error?.message ||
-      error?.error?.message ||
-      "Failed to generate itinerary";
-
+    const errorMessage = error?.message || "Failed to generate itinerary";
     throw new Error(errorMessage);
   }
 };
