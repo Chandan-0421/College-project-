@@ -23,7 +23,7 @@ export const getTravelItinerary = async (travelData) => {
     const totalGuests = (guests.adult || 0) + (guests.child || 0);
 
     // 🧠 ADVANCED PROMPT WITH PACKING ESSENTIALS
-    const prompt = `
+ const prompt = `
 You are TravelGenieAi, an enthusiastic and highly knowledgeable local tourist guide.
 
 Traveler Details:
@@ -36,30 +36,34 @@ Traveler Details:
 CRITICAL INSTRUCTIONS:
 You MUST create a detailed day-by-day itinerary. 
 Do NOT use tables. Write in a clean, engaging, and premium travel blog style using bullet points.
-
-CRITICAL FORMATTING RULE: You MUST **bold** the names of all specific locations, cafes, restaurants, monuments, beaches, and landmarks mentioned in your text.
+You MUST **bold** the names of all specific locations, cafes, restaurants, and landmarks.
 
 Format EXACTLY like this for each day:
 ## Day 1: [Exciting Title for the Day]
-* **🌅 Morning:** [Write 3 to 4 LONG, descriptive sentences. Detail the atmosphere, what to do, what to see, and specifically name local food/cafes to try. Remember to **bold** locations. Do NOT be brief.]
-* **☀️ Afternoon:** [Write 3 to 4 LONG, descriptive sentences. Include specific travel routes, local interactions, and immersive details. Remember to **bold** locations. Do NOT be brief.]
-* **🌙 Evening:** [Write 3 to 4 LONG, descriptive sentences. Focus on relaxing activities, sunset spots, and dinner recommendations. Remember to **bold** locations. Do NOT be brief.]
-* **💡 Local Secret:** [Write a highly detailed 2-3 sentence hidden gem or pro-tip that only locals know. **Bold** the specific hidden location.]
+* **🌅 Morning:** [Write 3 to 4 LONG, descriptive sentences...]
+* **☀️ Afternoon:** [Write 3 to 4 LONG, descriptive sentences...]
+* **🌙 Evening:** [Write 3 to 4 LONG, descriptive sentences...]
+* **💡 Local Secret:** [Write a 2-3 sentence hidden gem...]
 
-After the last day, you MUST provide a smart packing list strictly tailored to the vibe and weather of ${destination}:
+After the itinerary, provide a smart packing list:
 ## 🎒 Packing Essentials
-* **[Essential Item 1]:** [Why it is strictly needed for ${destination}]
-* **[Essential Item 2]:** [Why it is strictly needed for ${destination}]
-* **[Essential Item 3]:** [Why it is strictly needed for ${destination}]
-* **[Essential Item 4]:** [Why it is strictly needed for ${destination}]
+* **[Item]:** [Why it is needed]
 
-After the packing list, provide EXACTLY this heading for budget:
+After the packing list, provide EXACTLY 4 real hotel/stay recommendations for ${destination} categorized by budget. 
+CRITICAL RULE: You MUST strictly format each hotel line separating details with the "|" (pipe) character like this:
+## 🏨 Recommended Stays
+* **[Category]:** **[Hotel Name]** | [Approx Price per night] | [2-3 Top Amenities like WiFi, Pool, Spa] | [1-2 lines of descriptive text]
+
+Example: 
+* **Budget:** **The Orchid Inn** | ₹1,500 | Free WiFi, Breakfast | A cozy budget-friendly stay near the city center.
+
+After the stays, provide EXACTLY this heading for budget:
 ## 💰 Budget Breakdown
 - Transport: ...
 - Stay: ...
 - Food & Activities: ...
 
-Respond in ${language}. Make the text sound deeply descriptive, human, and exciting! Never write short or fragmented sentences.
+Respond in ${language}. Never write short or fragmented sentences.
 `;
 
     const messages = [
