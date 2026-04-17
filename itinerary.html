@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Your Premium Itinerary | TravelGenieAi</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Plus+Jakarta+Sans:wght@600;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <style>
+        :root {
+            --green-dark: #113534; --green-mid: #174F27; 
+            --brand-red: #E81C5C; --brand-orange: #F59E0B; 
+            --text-dark: #1A1A1A; --text-muted: #4a5568;
+            --bg-glass: rgba(255, 255, 255, 0.95);
+        }
+        
+        body { font-family: 'DM Sans', sans-serif; margin: 0; padding: 0; height: 100vh; overflow: hidden; background: linear-gradient(rgba(17, 53, 52, 0.80), rgba(17, 53, 52, 0.90)), url('https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?ixlib=rb-4.0.3&auto=format&fit=crop&w=2000&q=80') no-repeat center center fixed; background-size: cover; color: var(--text-dark); display: flex; flex-direction: column; }
+        
+        nav { background: #1A1D24; padding: 12px 40px; display: flex; align-items: center; justify-content: space-between; z-index: 1000; border-bottom: 1px solid rgba(255, 255, 255, 0.05); flex-shrink: 0; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        .nav-left { display: flex; align-items: center; gap: 12px; }
+        .nav-logo-icon { background: var(--brand-orange); width: 38px; height: 38px; border-radius: 10px; display: flex; justify-content: center; align-items: center; font-size: 20px; }
+        .logo { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 22px; color: #fff; text-decoration: none; }
+        .nav-center { display: flex; gap: 5px; align-items: center; }
+        .nav-link { background: transparent; border: none; color: #9CA3AF; font-family: 'DM Sans', sans-serif; font-size: 15px; font-weight: 600; padding: 10px 20px; border-radius: 8px; cursor: pointer; transition: all 0.3s ease; text-decoration: none; position: relative; }
+        .nav-link:hover { color: white; }
+        .nav-link.active { background: #2A2F38; color: white; }
+        .nav-link.active::after { content: ''; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%); width: 20px; height: 3px; background: var(--brand-orange); border-radius: 4px; }
+        .btn-plan { background: var(--brand-orange); color: #000; padding: 10px 24px; border-radius: 10px; font-weight: 800; text-decoration: none; font-size: 15px; transition: 0.3s; border: none; cursor: pointer; }
+        .btn-plan:hover { transform: translateY(-2px); box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3); }
+
+        .container { max-width: 1200px; margin: 20px auto 0; padding: 0 20px; width: 100%; flex-grow: 1; display: flex; flex-direction: column; overflow: hidden; }
+        #loader { text-align: center; padding: 100px 20px; color: white; }
+        .spinner { width: 60px; height: 60px; border: 4px solid rgba(255,255,255,0.2); border-top-color: var(--brand-orange); border-radius: 50%; animation: spin 1s infinite linear; margin: 0 auto 20px; }
+        @keyframes spin { 100% { transform: rotate(360deg); } }
+        
+        #result-box { display: none; flex-direction: column; height: 100%; overflow: hidden; }
+        .header-info { text-align: center; color: white; margin-bottom: 25px; flex-shrink: 0; }
+        .header-info h1 { font-family: 'Plus Jakarta Sans'; font-size: 42px; color: var(--brand-orange); margin-bottom: 10px; margin-top: 0;}
+        .header-info p { font-size: 18px; opacity: 0.9; margin: 0;}
+
+        .main-layout { display: flex; gap: 30px; flex-grow: 1; overflow: hidden; padding-bottom: 20px; }
+        .sidebar { width: 320px; flex-shrink: 0; background: var(--bg-glass); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 24px; padding: 24px; box-shadow: 0 10px 40px rgba(0,0,0,0.15); height: fit-content; display: flex; flex-direction: column; }
+        .content-area { flex-grow: 1; min-width: 0; height: 100%; overflow-y: auto; padding-right: 15px; padding-bottom: 40px; }
+        .content-area::-webkit-scrollbar { width: 8px; }
+        .content-area::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.4); border-radius: 10px; }
+        
+        .tab-content { display: none; animation: fadeIn 0.4s ease forwards; }
+        .tab-content.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        .glass-card { background: var(--bg-glass); backdrop-filter: blur(16px); border: 1px solid rgba(255, 255, 255, 0.5); border-radius: 24px; padding: 32px 40px; margin-bottom: 24px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15); }
+        .btn-print { width: 100%; background: #E5E7EB; color: #374151; padding: 16px; border: none; border-radius: 16px; font-weight: 800; font-size: 16px; cursor: pointer; transition: 0.3s; margin-top: 15px;}
+        
+        /* Typography */
+        .markdown-body h2 { color: var(--green-mid); font-family: 'Plus Jakarta Sans'; font-size: 26px; border-bottom: 2px dashed rgba(23,79,39,0.2); padding-bottom: 12px; margin-top: 0; margin-bottom: 24px;}
+        .markdown-body ul { list-style: none; padding-left: 0; margin: 0; }
+        .markdown-body li { margin-bottom: 20px; line-height: 1.7; font-size: 16px; color: var(--text-muted); background: #FAFAFA; padding: 20px; border-radius: 16px; border: 1px solid #F0F0F0; }
+        .markdown-body strong { color: var(--green-dark); font-weight: 800; }
+        .markdown-body li > strong:first-child { color: var(--text-dark); font-size: 18px; display: block; margin-bottom: 10px; border-bottom: 1px solid rgba(0,0,0,0.05); padding-bottom: 5px; }
+
+        /* Airbnb Style Hotel Cards (Clickable) */
+        .hotel-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 24px; margin-top: 10px; }
+        .hotel-card { background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.05); transition: transform 0.3s ease; border: 1px solid #eee; display: flex; flex-direction: column; cursor: pointer; position: relative;}
+        .hotel-card:hover { transform: translateY(-5px); box-shadow: 0 12px 25px rgba(0,0,0,0.1); }
+        .hotel-img-wrapper { position: relative; height: 180px; width: 100%; overflow: hidden; }
+        .hotel-img { width: 100%; height: 100%; object-fit: cover; }
+        .guest-fav { position: absolute; top: 12px; left: 12px; background: white; padding: 4px 12px; border-radius: 20px; font-size: 12px; font-weight: 700; color: #222; box-shadow: 0 2px 10px rgba(0,0,0,0.1); z-index: 2;}
+        .hotel-info { padding: 16px; }
+        .hotel-type { font-size: 12px; color: #717171; font-weight: 600; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;}
+        .hotel-name { font-size: 16px; font-weight: 800; color: #222; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .hotel-price { font-size: 14px; color: #222; font-weight: 600; margin-bottom: 8px;}
+        .hotel-desc { font-size: 14px; color: #717171; line-height: 1.4; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+        /* 🔥 PREMIUM FROSTED GLASS MODAL 🔥 */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(8px); z-index: 9999; justify-content: center; align-items: center; animation: fadeIn 0.3s ease; }
+        .modal-box { background: rgba(255, 255, 255, 0.95); border-radius: 24px; width: 90%; max-width: 500px; overflow: hidden; box-shadow: 0 20px 50px rgba(0,0,0,0.3); transform: scale(0.95); animation: scaleUp 0.3s ease forwards; border: 1px solid rgba(255,255,255,0.4);}
+        @keyframes scaleUp { to { transform: scale(1); } }
+        .modal-img { width: 100%; height: 220px; object-fit: cover; }
+        .modal-body { padding: 30px; }
+        .modal-type { color: var(--brand-orange); font-weight: 700; font-size: 13px; text-transform: uppercase; margin-bottom: 5px; letter-spacing: 1px;}
+        .modal-title { font-size: 26px; font-family: 'Plus Jakarta Sans'; color: #111; margin: 0 0 10px 0; }
+        .modal-price { font-size: 20px; font-weight: 800; color: var(--green-mid); margin-bottom: 15px;}
+        .modal-amenities { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;}
+        .amenity-tag { background: #f3f4f6; color: #374151; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1px solid #e5e7eb;}
+        .modal-desc { font-size: 15px; color: #4b5563; line-height: 1.6; margin-bottom: 25px; }
+        .modal-actions { display: flex; gap: 15px; }
+        .btn-book { flex: 1; background: #FF385C; color: white; padding: 14px; border: none; border-radius: 12px; font-weight: 800; font-size: 16px; cursor: pointer; transition: 0.3s; text-align: center; text-decoration: none;}
+        .btn-book:hover { background: #E31C5F; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(255, 56, 92, 0.3); }
+        .btn-close { background: #E5E7EB; color: #374151; padding: 14px 24px; border: none; border-radius: 12px; font-weight: 700; cursor: pointer; transition: 0.3s;}
+        .btn-close:hover { background: #D1D5DB; }
+
+        .leaflet-control-attribution { display: none; }
+    </style>
+</head>
+<body>
+
+<nav>
+    <div class="nav-left">
+        <div class="nav-logo-icon">✈️</div>
+        <a href="index2.html" class="logo">TravelGenie<span style="color:var(--brand-orange)">Ai</span></a>
+    </div>
+    <div class="nav-center" id="nav-tabs" style="display: none;">
+        <a href="index2.html" class="nav-link">Home</a>
+        <button class="nav-link active" onclick="switchTab('itinerary', this)">Itinerary</button>
+        <button class="nav-link" onclick="switchTab('stays', this)">Stays</button>
+        <button class="nav-link" onclick="switchTab('packing', this)">Packing</button>
+        <button class="nav-link" onclick="switchTab('budget', this)">Budget</button>
+    </div>
+    <div class="nav-right">
+        <a href="index2.html" class="btn-plan">Plan a Trip</a>
+    </div>
+</nav>
+
+<div class="container">
+    <div id="loader">
+        <div class="spinner"></div>
+        <h2 style="font-family: 'Plus Jakarta Sans'; color: white;">Crafting your magical journey...</h2>
+        <p style="color: white; opacity: 0.8;">Analyzing routes, weather, and stays.</p>
+    </div>
+
+    <div id="result-box">
+        <div class="header-info">
+            <h1 id="dest-title">Adventure Awaits</h1>
+            <p id="dest-sub">Generated by TravelGenieAi</p>
+        </div>
+        
+        <div class="main-layout">
+            <aside class="sidebar" id="sidebar">
+                <div id="map-container" style="height: 200px; width: 100%; border-radius: 12px; margin-bottom: 15px; overflow: hidden; border: 1px solid #eee; display: none;">
+                    <div id="map" style="height: 100%; width: 100%; z-index: 1;"></div>
+                </div>
+
+                <div id="weather-widget" style="display: none; background: rgba(23, 79, 39, 0.05); border-radius: 12px; padding: 15px; border: 1px solid rgba(23, 79, 39, 0.1); align-items: center; gap: 15px;">
+                    <div id="weather-icon" style="font-size: 32px; line-height: 1;">⛅</div>
+                    <div>
+                        <div style="font-size: 12px; color: var(--green-mid); font-weight: 800; text-transform: uppercase;">Live Weather</div>
+                        <div id="weather-temp" style="font-size: 24px; font-weight: 800; color: var(--text-dark); line-height: 1.2;">--°C</div>
+                        <div id="weather-desc" style="font-size: 13px; font-weight: 500; color: var(--text-muted);">Loading...</div>
+                    </div>
+                </div>
+                
+                <button class="btn-print" onclick="window.print()">🖨️ Download PDF</button>
+            </aside>
+
+            <main class="content-area">
+                <div id="tab-itinerary" class="tab-content active"><div id="itinerary-cards-container"></div></div>
+                <div id="tab-stays" class="tab-content"><div class="glass-card" id="stays-container"></div></div>
+                <div id="tab-packing" class="tab-content"><div class="glass-card markdown-body" id="packing-container"></div></div>
+                <div id="tab-budget" class="tab-content"><div class="glass-card markdown-body" id="budget-container"></div></div>
+            </main>
+        </div>
+    </div>
+</div>
+
+<div class="modal-overlay" id="hotel-modal">
+    <div class="modal-box">
+        <img src="" id="modal-img" class="modal-img" alt="Hotel">
+        <div class="modal-body">
+            <div class="modal-type" id="modal-type">Budget</div>
+            <h2 class="modal-title" id="modal-title">Hotel Name</h2>
+            <div class="modal-price" id="modal-price">₹0</div>
+            <div class="modal-amenities" id="modal-amenities"></div>
+            <p class="modal-desc" id="modal-desc">Description goes here.</p>
+            <div class="modal-actions">
+                <button class="btn-close" onclick="closeModal()">Close</button>
+                <a href="#" target="_blank" class="btn-book" id="modal-book-btn">Check Availability</a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function switchTab(tabName, btnElement) {
+        document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+        document.querySelectorAll('.nav-link').forEach(btn => btn.classList.remove('active'));
+        document.getElementById(`tab-${tabName}`).classList.add('active');
+        btnElement.classList.add('active');
+    }
+
+    // Modal Functions
+    let currentDestination = "";
+    function openModal(name, type, price, amenities, desc, img) {
+        document.getElementById('modal-title').innerText = name;
+        document.getElementById('modal-type').innerText = type + " Stay";
+        document.getElementById('modal-price').innerText = price;
+        document.getElementById('modal-desc').innerText = desc;
+        document.getElementById('modal-img').src = img;
+        
+        // Generate tags
+        const tagsHtml = amenities.split(',').map(tag => `<span class="amenity-tag">✓ ${tag.trim()}</span>`).join('');
+        document.getElementById('modal-amenities').innerHTML = tagsHtml;
+        
+        // Smart Google Redirect Link!
+        const searchUrl = `https://www.google.com/search?q=${encodeURIComponent(name + ' hotel in ' + currentDestination)}`;
+        document.getElementById('modal-book-btn').href = searchUrl;
+
+        document.getElementById('hotel-modal').style.display = 'flex';
+    }
+
+    function closeModal() {
+        document.getElementById('hotel-modal').style.display = 'none';
+    }
+
+    async function loadMapAndWeather(destination) {
+        try {
+            const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(destination)}`);
+            const data = await res.json();
+            if(data && data.length > 0) {
+                const lat = data[0].lat; const lon = data[0].lon;
+                document.getElementById('map-container').style.display = 'block';
+                setTimeout(() => {
+                    const map = L.map('map').setView([lat, lon], 12);
+                    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 19 }).addTo(map);
+                    L.marker([lat, lon]).addTo(map).bindPopup(`<b>${destination}</b>`).openPopup();
+                    map.invalidateSize();
+                }, 300);
+                try {
+                    const weatherRes = await fetch(`https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current_weather=true`);
+                    const weatherData = await weatherRes.json();
+                    if (weatherData && weatherData.current_weather) {
+                        const temp = weatherData.current_weather.temperature; const code = weatherData.current_weather.weathercode;
+                        let wIcon = "🌤️", wDesc = "Clear / Cloudy";
+                        if (code === 0) { wIcon = "☀️"; wDesc = "Clear Sky"; } else if (code >= 1 && code <= 3) { wIcon = "⛅"; wDesc = "Partly Cloudy"; } else if (code >= 51 && code <= 67) { wIcon = "🌧️"; wDesc = "Rain"; } else if (code >= 71 && code <= 77) { wIcon = "❄️"; wDesc = "Snow"; } else if (code >= 95) { wIcon = "⛈️"; wDesc = "Thunderstorm"; }
+                        document.getElementById('weather-widget').style.display = 'flex';
+                        document.getElementById('weather-temp').innerText = `${temp}°C`;
+                        document.getElementById('weather-desc').innerText = wDesc;
+                        document.getElementById('weather-icon').innerText = wIcon;
+                    }
+                } catch(e) {}
+            }
+        } catch (err) {}
+    }
+
+    window.onload = async function() {
+        const rawData = localStorage.getItem('travelGenieRequest');
+        if(!rawData) { window.location.href = 'index2.html'; return; }
+
+        const llmData = JSON.parse(rawData);
+        currentDestination = llmData.destination.split(',')[0];
+        
+        document.getElementById('dest-title').innerText = `Trip to ${currentDestination}`;
+        document.getElementById('dest-sub').innerText = `📅 ${llmData.timing}  |  👥 ${llmData.guests.adult + llmData.guests.child} Guests`;
+
+        try {
+            const response = await fetch('http://localhost:5000/api/recommend', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(llmData)
+            });
+            const data = await response.json();
+
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('result-box').style.display = 'flex';
+            document.getElementById('nav-tabs').style.display = 'flex'; 
+
+            loadMapAndWeather(currentDestination);
+
+            if (data.success && data.data) {
+                let fullText = data.data;
+
+                // 1. EXTRACT BUDGET
+                let budgetText = `<p><strong>Max Limit:</strong> ${llmData.budget_limit}</p>`;
+                const budgetMatch = fullText.match(/(?:#+\s*)?(?:💰\s*)?budget breakdown[:\s]*([\s\S]*)/i);
+                if (budgetMatch) { budgetText = budgetMatch[1]; fullText = fullText.replace(budgetMatch[0], ""); }
+                document.getElementById('budget-container').innerHTML = `<h2 style="color: var(--green-mid); font-family: 'Plus Jakarta Sans'; font-size: 26px; border-bottom: 2px dashed rgba(23,79,39,0.2); padding-bottom: 12px; margin-top: 0;">💰 Complete Budget</h2>` + marked.parse(budgetText);
+
+                // 🔥 2. EXTRACT STAYS & PARSE INTO INTERACTIVE CARDS 🔥
+                let staysText = "";
+                const staysMatch = fullText.match(/(?:#+\s*)?(?:🏨\s*)?recommended stays[:\s]*([\s\S]*?)(?=(?:#+\s*)?(?:🎒\s*)?packing essentials|(?:\n\n#)|$)/i);
+                
+                if (staysMatch) {
+                    staysText = staysMatch[1];
+                    fullText = fullText.replace(staysMatch[0], ""); 
+                    
+                    const hotelImages = [
+                        "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=600&q=80",
+                        "https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?w=600&q=80",
+                        "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=600&q=80",
+                        "https://images.unsplash.com/photo-1505691938895-1758d7feb511?w=600&q=80"
+                    ];
+
+                    let gridHTML = `<div class="hotel-grid">`;
+                    let lines = staysText.split('\n');
+                    let imgIndex = 0; let hasHotels = false;
+
+                    lines.forEach(line => {
+                        // Parses: * **Budget:** **Orchid Inn** | ₹1500 | WiFi, Pool | Description
+                        const match = line.match(/\*\s*\*\*(.*?):\*\*\s*\*\*(.*?)\*\*\s*\|\s*(.*?)\s*\|\s*(.*?)\s*\|\s*(.*)/i);
+                        if(match) {
+                            hasHotels = true;
+                            const type = match[1].trim(); const name = match[2].trim(); 
+                            const price = match[3].trim(); const amenities = match[4].trim(); const desc = match[5].trim();
+                            const img = hotelImages[imgIndex % hotelImages.length];
+                            imgIndex++;
+
+                            // Smart Escaping for the onclick function
+                            const safeName = name.replace(/'/g, "\\'");
+                            const safeType = type.replace(/'/g, "\\'");
+                            const safePrice = price.replace(/'/g, "\\'");
+                            const safeAmenities = amenities.replace(/'/g, "\\'");
+                            const safeDesc = desc.replace(/'/g, "\\'");
+
+                            gridHTML += `
+                            <div class="hotel-card" onclick="openModal('${safeName}', '${safeType}', '${safePrice}', '${safeAmenities}', '${safeDesc}', '${img}')">
+                                <div class="hotel-img-wrapper">
+                                    <span class="guest-fav">Guest favourite</span>
+                                    <img src="${img}" class="hotel-img" alt="${name}">
+                                </div>
+                                <div class="hotel-info">
+                                    <div class="hotel-type">${type}</div>
+                                    <div class="hotel-name">${name}</div>
+                                    <div class="hotel-price">${price} per night</div>
+                                    <div class="hotel-desc">${desc}</div>
+                                </div>
+                            </div>`;
+                        }
+                    });
+                    gridHTML += `</div>`;
+
+                    if(!hasHotels) gridHTML = marked.parse(staysText);
+                    document.getElementById('stays-container').innerHTML = `<h2 style="color: var(--green-mid); font-family: 'Plus Jakarta Sans'; font-size: 26px; border-bottom: 2px dashed rgba(23,79,39,0.2); padding-bottom: 12px; margin-top: 0;">🏨 Highly Rated Stays</h2>` + gridHTML;
+                }
+
+                // 3. EXTRACT PACKING
+                let packingText = "<p>No specific packing essentials generated.</p>";
+                const packingMatch = fullText.match(/(?:#+\s*)?(?:🎒\s*)?packing essentials[:\s]*([\s\S]*)/i);
+                if (packingMatch) { packingText = packingMatch[1]; fullText = fullText.replace(packingMatch[0], ""); }
+                document.getElementById('packing-container').innerHTML = `<h2 style="color: var(--green-mid); font-family: 'Plus Jakarta Sans'; font-size: 26px; border-bottom: 2px dashed rgba(23,79,39,0.2); padding-bottom: 12px; margin-top: 0;">🎒 Smart Packing List</h2>` + marked.parse(packingText);
+
+                // 4. REMAINING IS ITINERARY
+                const daySplitRegex = /(?:^|\n)(?=[#\*\s]*Day\s*\d+)/i;
+                let chunks = fullText.split(daySplitRegex).filter(s => s.trim() !== "");
+                if (chunks.length === 0 && fullText.trim() !== "") chunks = [fullText];
+
+                const itinContainer = document.getElementById('itinerary-cards-container');
+                itinContainer.innerHTML = "";
+                chunks.forEach((chunk, i) => {
+                    const card = document.createElement('div');
+                    card.className = 'glass-card markdown-body';
+                    card.style.animationDelay = `${(i+1) * 0.15}s`;
+                    card.innerHTML = marked.parse(chunk);
+                    itinContainer.appendChild(card);
+                });
+
+            } else {
+                document.getElementById('itinerary-cards-container').innerHTML = `<div class="glass-card"><h2 style="color:red;">Error loading trip.</h2></div>`;
+            }
+        } catch (error) {
+            document.getElementById('loader').style.display = 'none';
+            document.getElementById('result-box').style.display = 'flex';
+            document.getElementById('itinerary-cards-container').innerHTML = `<div class="glass-card"><h2 style="color:red;">Backend Error</h2></div>`;
+        }
+    };
+</script>
+</body>
+</html>

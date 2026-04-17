@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TravelGenieAi – AI Powered Tourist Recommendation</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=Plus+Jakarta+Sans:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  /* ==========================================================================
+     1. CSS VARIABLES & BASE SETUP
+     ========================================================================== */
+  :root {
+    --green-dark: #113534; --green-mid: #174F27; --green-light: #1F5E3B;
+    --cream: #F9EDDD; --cream-dark: #F8F7F3; --beige: #EEDAB8;
+    --yellow: #FFE093; --yellow-dark: #FCEFA0;
+    --text-dark: #1A1A1A; --text-foot: #0B1C2D; --white: #FFFFFF;
+    --search-bg: #EBEBEB; --search-hover: #DCDCDC; --brand-red: #E81C5C;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--cream-dark); color: var(--text-dark); overflow-x: hidden; }
+
+  /* ==========================================================================
+     2. SCROLL REVEAL ANIMATIONS
+     ========================================================================== */
+  .reveal { opacity: 0; transform: translateY(40px); transition: all 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94); }
+  .reveal.visible { opacity: 1; transform: translateY(0); }
+  .reveal-left { opacity: 0; transform: translateX(-50px); transition: all 0.7s ease; }
+  .reveal-left.visible { opacity: 1; transform: translateX(0); }
+  .reveal-right { opacity: 0; transform: translateX(50px); transition: all 0.7s ease; }
+  .reveal-right.visible { opacity: 1; transform: translateX(0); }
+  .delay-1 { transition-delay: 0.1s; } .delay-2 { transition-delay: 0.2s; }
+  .delay-3 { transition-delay: 0.3s; } .delay-4 { transition-delay: 0.4s; }
+
+  /* ==========================================================================
+     3. NAVBAR
+     ========================================================================== */
+  nav { position: fixed; top: 16px; left: 50%; transform: translateX(-50%); width: min(1200px, calc(100% - 40px)); background: var(--cream); border-radius: 12px; padding: 0 28px; height: 70px; display: flex; align-items: center; justify-content: space-between; z-index: 1000; box-shadow: 0 8px 32px rgba(17,53,52,0.18); backdrop-filter: blur(12px); transition: all 0.3s ease; }
+  .logo { font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 800; font-size: 22px; color: var(--green-mid); display: flex; align-items: center; gap: 8px; text-decoration: none; }
+  .logo-icon { width: 36px; height: 36px; background: var(--green-mid); border-radius: 10px; display: flex; align-items: center; justify-content: center; color: var(--yellow); font-size: 18px; transition: transform 0.3s; }
+  .logo:hover .logo-icon { transform: rotate(15deg) scale(1.1); }
+  .nav-links { display: flex; gap: 32px; list-style: none; }
+  .nav-links a { font-size: 15px; font-weight: 600; color: var(--green-mid); text-decoration: none; position: relative; padding: 4px 0;}
+  .nav-links a::after { content: ''; position: absolute; bottom: 0; left: 0; width: 0; height: 2px; background: var(--green-mid); transition: width 0.3s; }
+  .nav-links a:hover::after, .nav-links a.active::after { width: 100%; }
+  .nav-btns { display: flex; gap: 12px; }
+  .btn-login { padding: 10px 24px; border: 1.5px solid var(--green-mid); border-radius: 10px; background: transparent; color: var(--green-mid); font-weight: 600; cursor: pointer; transition: 0.2s;}
+  .btn-login:hover { background: var(--green-mid); color: white; }
+  .btn-signup { padding: 10px 24px; border-radius: 10px; background: var(--yellow); border: none; color: var(--green-mid); font-weight: 700; cursor: pointer; transition: 0.2s; box-shadow: 0 4px 12px rgba(255,224,147,0.5); }
+  .btn-signup:hover { background: #f5d163; transform: translateY(-2px); }
+
+  /* ==========================================================================
+     4. HERO SECTION & VIDEO
+     ========================================================================== */
+  .hero { position: relative; width: 100%; min-height: 100vh; display: flex; flex-direction: column; overflow: visible; z-index: 1; }
+  .hero-media { position: absolute; inset: 0; overflow: hidden; background: #000; z-index: -1; }
+  .hero-bg { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; animation: heroZoom 12s ease-out forwards; transition: opacity 1s ease-in-out; }
+  @keyframes heroZoom { from { transform: scale(1.08); } to { transform: scale(1.0); } }
+  .hero-overlay { position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(17,53,52,0.65) 0%, rgba(17,53,52,0.3) 50%, rgba(17,53,52,0.8) 100%); z-index: 0; pointer-events: none; }
+  
+  .hero-content { position: relative; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; flex: 1; text-align: center; padding: 120px 20px 80px; }
+  .hero-badge { display: inline-flex; align-items: center; gap: 8px; background: rgba(249,237,221,0.18); border: 1px solid rgba(249,237,221,0.35); backdrop-filter: blur(8px); color: var(--cream); padding: 8px 20px; border-radius: 100px; font-size: 14px; font-weight: 500; margin-bottom: 24px; }
+  .hero-badge span { width: 8px; height: 8px; background: var(--brand-red); border-radius: 50%; }
+  .hero-title { font-family: 'Plus Jakarta Sans'; font-size: clamp(38px, 5.5vw, 72px); font-weight: 800; color: var(--white); line-height: 1.05; max-width: 900px; }
+  .hero-title .highlight { color: var(--yellow); }
+  .hero-sub { font-size: clamp(16px, 2vw, 20px); color: rgba(255,255,255,0.88); max-width: 600px; margin-top: 16px; margin-bottom: 40px; }
+
+  /* ==========================================================================
+     5. TRAVELGENIE AI SEARCH BAR
+     ========================================================================== */
+  .search-bar { background: var(--search-bg); border-radius: 60px; padding: 8px; display: flex; align-items: center; box-shadow: 0 20px 60px rgba(0,0,0,0.25); width: min(1150px, calc(100% - 40px)); position: relative; border: 1px solid #ddd; z-index: 50; }
+  .search-field { position: relative; display: flex; align-items: center; gap: 12px; flex: 1; padding: 12px 20px; border-radius: 40px; cursor: pointer; transition: all 0.2s; text-align: left; }
+  .search-field:hover { background: var(--search-hover); }
+  .search-field.active { background: #fff; box-shadow: 0 8px 24px rgba(0,0,0,0.15); z-index: 100; }
+  
+  .search-divider { width: 1px; height: 32px; background: #ccc; transition: opacity 0.2s; margin: 0 2px; }
+  .search-field.active + .search-divider, .search-divider:has(+ .search-field.active), .search-field:hover + .search-divider { opacity: 0; }
+  
+  .search-field-label { font-size: 12px; font-weight: 700; color: #1a1a1a; margin-bottom: 2px; }
+
+  .custom-input {
+      border: none;
+      background: transparent;
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 500;
+      color: #1a1a1a;
+      padding: 0;
+      margin: 0;
+      width: 100%;
+      outline: none;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+  }
+  .custom-input::placeholder { color: #666; font-weight: 500; }
+  .search-field-val { font-size: 14px; font-weight: 500; color: #666; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  .search-field svg { color: var(--green-mid); flex-shrink: 0; }
+  
+  .search-btn { width: 50px; height: 50px; background: var(--brand-red); border: none; border-radius: 50%; cursor: pointer; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: transform 0.2s; margin-left: 8px; color: white;}
+  .search-btn:hover { background: #D01550; transform: scale(1.05); }
+
+  @keyframes spin { 100% { transform: rotate(360deg); } }
+
+  /* Universal Dropdown Styling */
+  .dropdown-menu { position: absolute; top: calc(100% + 15px); background: #fff; border-radius: 32px; box-shadow: 0 16px 40px rgba(0,0,0,0.15); padding: 32px; opacity: 0; visibility: hidden; transform: translateY(10px); transition: all 0.25s cubic-bezier(0.2, 0, 0, 1); z-index: 999; cursor: default; color: var(--text-dark); }
+  .search-field.active .dropdown-menu { opacity: 1; visibility: visible; transform: translateY(0); }
+
+  /* Where Dropdowns */
+  .dropdown-where { left: 0; width: 380px; }
+  .dd-title { font-size: 12px; font-weight: 700; color: #1a1a1a; margin-bottom: 16px; padding-left: 8px; }
+  .dest-item { display: flex; align-items: center; gap: 16px; padding: 12px 8px; border-radius: 12px; cursor: pointer; transition: background 0.2s; }
+  .dest-item:hover { background: #f7f7f7; }
+  .dest-icon-wrap { width: 48px; height: 48px; background: #f1f1f1; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; }
+  .dest-name { font-size: 16px; font-weight: 600; color: #1a1a1a; margin-bottom: 2px;}
+  .dest-sub { font-size: 13px; color: #666; }
+
+  /* When Dropdown */
+  .dropdown-when { left: 50%; transform: translateX(-50%) translateY(10px); width: 850px; padding: 24px 32px; }
+  .search-field.active .dropdown-when { transform: translateX(-50%) translateY(0); }
+  .cal-tabs { display: flex; justify-content: center; margin-bottom: 24px; }
+  .cal-tabs-inner { background: #ebebeb; border-radius: 30px; display: inline-flex; padding: 4px; }
+  .cal-tab { padding: 10px 24px; font-size: 14px; font-weight: 600; border-radius: 30px; cursor: pointer; transition: 0.2s;}
+  .cal-tab.active { background: #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.1); color: #1a1a1a; }
+  .cal-tab:not(.active) { color: #666; }
+  
+  .cal-months-wrapper { display: flex; gap: 40px; justify-content: space-between; }
+  .cal-month { flex: 1; }
+  .cal-month-title { font-size: 16px; font-weight: 600; text-align: center; margin-bottom: 20px; color: #1a1a1a; }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px 0; text-align: center; }
+  .cal-day-header { font-size: 12px; font-weight: 600; color: #888; margin-bottom: 12px; }
+  .cal-day-cell { position: relative; display: flex; justify-content: center; align-items: center; height: 44px; }
+  .cal-day { width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; border-radius: 50%; font-size: 14px; font-weight: 600; cursor: pointer; transition: 0.2s; position: relative; z-index: 2;}
+  .cal-day.disabled { color: #ccc; pointer-events: none; }
+  .cal-day:hover:not(.disabled):not(.selected) { border: 1.5px solid #1a1a1a; }
+  .cal-day.selected { background: #1a1a1a; color: #fff; }
+  .cal-day-cell.in-range { background: #f1f1f1; }
+  .cal-day-cell.range-start { background: linear-gradient(to right, transparent 50%, #f1f1f1 50%); }
+  .cal-day-cell.range-end { background: linear-gradient(to left, transparent 50%, #f1f1f1 50%); }
+
+  .flex-section-title { font-size: 18px; font-weight: 600; text-align: center; margin: 20px 0 15px; color:#1a1a1a;}
+  .flex-pill-group { display: flex; justify-content: center; gap: 10px; margin-bottom: 30px; }
+  .flex-pill { border: 1px solid #ddd; border-radius: 30px; padding: 12px 24px; font-size: 14px; font-weight:600; cursor: pointer; transition: 0.2s; color: #1a1a1a;}
+  .flex-pill:hover { border-color: #1a1a1a; }
+  .flex-pill.active { border-color: #1a1a1a; background: #f7f7f7; border-width: 2px;}
+  .flex-month-grid { display: flex; gap: 15px; overflow-x: auto; padding: 10px 5px 20px; justify-content: center; }
+  .flex-month-card { border: 1px solid #ddd; border-radius: 16px; padding: 24px 20px; text-align: center; min-width: 130px; cursor: pointer; transition: 0.2s; background:#fff;}
+  .flex-month-card:hover { border-color: #1a1a1a; }
+  .flex-month-card.active { border-color: #1a1a1a; background: #f7f7f7; border-width: 2px;}
+  .flex-month-icon { font-size: 28px; margin-bottom: 10px; color:#666;}
+
+  /* Who Dropdown */
+  .dropdown-who { left: 50%; transform: translateX(-50%) translateY(10px); width: 380px; }
+  .search-field.active .dropdown-who { transform: translateX(-50%) translateY(0); }
+  .guest-row { display: flex; justify-content: space-between; align-items: center; padding: 20px 0; border-bottom: 1px solid #ebebeb; }
+  .guest-row:last-child { border-bottom: none; padding-bottom: 0; }
+  .guest-row:first-child { padding-top: 0; }
+  .g-info-title { font-size: 16px; font-weight: 600; color: #1a1a1a; margin-bottom: 4px;}
+  .g-info-sub { font-size: 13px; color: #666; }
+  .g-controls { display: flex; align-items: center; gap: 14px; }
+  .g-btn { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #b0b0b0; background: #fff; display: flex; align-items: center; justify-content: center; font-size: 18px; cursor: pointer; color: #666;}
+  .g-btn:hover:not(:disabled) { border-color: #1a1a1a; color: #1a1a1a; }
+  .g-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+  .g-count { font-size: 16px; width: 16px; text-align: center; color: #1a1a1a;}
+
+  /* Budget Dropdown */
+  .dropdown-budget { right: 0; width: 380px; }
+  .budget-opt { padding: 14px 20px; border: 1px solid #ddd; border-radius: 12px; margin-bottom: 12px; cursor: pointer; transition: 0.2s; font-weight: 600;}
+  .budget-opt:last-child { margin-bottom: 0;}
+  .budget-opt:hover { border-color: #1a1a1a; background: #f7f7f7;}
+  .budget-opt.active { border-color: #1a1a1a; background: #f7f7f7; border-width: 2px;}
+
+  .stats-bar { background: var(--green-mid); padding: 28px 0; display: flex; justify-content: center; gap: 80px; }
+  .stat-item { text-align: center; }
+  .stat-num { font-family: 'Plus Jakarta Sans', sans-serif; font-size: 36px; font-weight: 800; color: var(--yellow); display: block; }
+  .stat-label { font-size: 14px; color: rgba(249,237,221,0.8); margin-top: 4px; }
+  
+  @media (max-width: 1024px) {
+    .container { padding: 0 30px; }
+    .search-bar { width: 100%; }
+    .dropdown-when { width: 600px; }
+  }
+  @media (max-width: 768px) {
+    .stats-bar { flex-wrap: wrap; gap: 30px 40px; }
+    .dropdown-where, .dropdown-who, .dropdown-when, .dropdown-budget { width: calc(100vw - 40px); left: 50% !important; right:auto !important; transform: translateX(-50%) translateY(10px) !important; }
+    .search-field.active .dropdown-where, .search-field.active .dropdown-who, .search-field.active .dropdown-when, .search-field.active .dropdown-budget { transform: translateX(-50%) translateY(0) !important; }
+    .cal-months-wrapper { flex-direction: column; }
+    .search-bar { flex-direction: column; border-radius: 20px; padding: 20px;}
+    .search-divider { height: 1px; width: 100%; margin: 10px 0; }
+    nav { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<nav id="mainNav">
+  <a href="#" class="logo"><span class="logo-icon">⛺</span>TravelGenie<span style="color:var(--brand-red)">Ai</span></a>
+  <ul class="nav-links">
+    <li><a href="#" class="active">Home</a></li>
+    <li><a href="#about">About AI</a></li>
+    <li><a href="#camps">Adventures</a></li>
+    <li><a href="#pricing">Budget</a></li>
+  </ul>
+  <div class="nav-btns">
+    <button class="btn-login">Login</button>
+    <button class="btn-signup">Sign Up</button>
+  </div>
+</nav>
+
+<section class="hero">
+  <div class="hero-media">
+    <video id="heroVideo1" class="hero-bg" src="../test2.mp4" autoplay muted playsinline style="z-index: 1; opacity: 1;"></video>
+    <video id="heroVideo2" class="hero-bg" src="" muted playsinline style="z-index: 0; opacity: 0;"></video>
+  </div>
+  <div class="hero-overlay"></div>
+  
+  <div class="hero-content">
+    <div class="hero-badge reveal"><span></span> AI-Powered Travel Recommendations</div>
+    <h1 class="hero-title reveal delay-1">Discover Your <span class="highlight">Next Adventure</span></h1>
+    <p class="hero-sub reveal delay-2">Tell our LLM where you want to go, when, and your budget. We'll handle the rest.</p>
+
+    <div class="search-bar reveal delay-3">
+      
+      <div class="search-field" id="sf-origin">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <div style="width: 100%;">
+          <div class="search-field-label">Where From?</div>
+          <input type="text" class="custom-input" id="val-origin" placeholder="Origin city" autocomplete="off">
+        </div>
+        
+        <div class="dropdown-menu dropdown-where">
+           <div class="dd-title">Select Origin</div>
+           <div class="dest-item" onclick="selectOrigin('Nagpur, Maharashtra')">
+              <div class="dest-icon-wrap" style="color:var(--brand-red)">🧭</div>
+              <div><div class="dest-name">Nagpur, Maharashtra</div><div class="dest-sub">Current Location</div></div>
+           </div>
+           <div class="dest-item" onclick="selectOrigin('Mumbai, Maharashtra')">
+              <div class="dest-icon-wrap">🏙️</div>
+              <div><div class="dest-name">Mumbai, Maharashtra</div><div class="dest-sub">Metro City</div></div>
+           </div>
+           <div class="dest-item" onclick="selectOrigin('Delhi, India')">
+              <div class="dest-icon-wrap">🌆</div>
+              <div><div class="dest-name">Delhi, India</div><div class="dest-sub">Metro City</div></div>
+           </div>
+        </div>
+      </div>
+
+      <div class="search-divider"></div>
+
+      <div class="search-field" id="sf-where">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <div style="width: 100%;">
+          <div class="search-field-label">Where To?</div>
+          <input type="text" class="custom-input" id="val-where" placeholder="Search destinations" autocomplete="off">
+        </div>
+        
+        <div class="dropdown-menu dropdown-where">
+           <div class="dd-title">Suggested destinations</div>
+           <div class="dest-item" onclick="selectLocation('Manali, Himachal')">
+              <div class="dest-icon-wrap">🏔️</div>
+              <div><div class="dest-name">Manali, Himachal</div><div class="dest-sub">Popular mountain destination</div></div>
+           </div>
+           <div class="dest-item" onclick="selectLocation('Rishikesh, Uttarakhand')">
+              <div class="dest-icon-wrap">🛶</div>
+              <div><div class="dest-name">Rishikesh, Uttarakhand</div><div class="dest-sub">River rafting & camping</div></div>
+           </div>
+           <div class="dest-item" onclick="selectLocation('Goa, India')">
+              <div class="dest-icon-wrap">🏖️</div>
+              <div><div class="dest-name">Goa, India</div><div class="dest-sub">Beach side camping</div></div>
+           </div>
+        </div>
+      </div>
+      
+      <div class="search-divider"></div>
+      
+      <div class="search-field" id="sf-when">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+        <div>
+          <div class="search-field-label">When</div>
+          <div class="search-field-val" id="val-when">Add dates</div>
+        </div>
+
+        <div class="dropdown-menu dropdown-when">
+            <div class="cal-tabs">
+               <div class="cal-tabs-inner">
+                 <div class="cal-tab active" id="tab-dates" onclick="switchWhenTab('dates')">Dates</div>
+                 <div class="cal-tab" id="tab-flex" onclick="switchWhenTab('flex')">Flexible</div>
+               </div>
+            </div>
+            
+            <div id="panel-dates">
+                <div class="cal-months-wrapper">
+                   <div class="cal-month">
+                      <div class="cal-month-title">March 2026</div>
+                      <div class="cal-grid" id="grid-mar"></div> 
+                   </div>
+                   <div class="cal-month">
+                      <div class="cal-month-title">April 2026</div>
+                      <div class="cal-grid" id="grid-apr"></div> 
+                   </div>
+                </div>
+            </div>
+
+            <div id="panel-flex" style="display:none;">
+                <div class="flex-section-title">How long would you like to stay?</div>
+                <div class="flex-pill-group">
+                    <button class="flex-pill active" onclick="selFlexLen(this, 'Weekend')">Weekend</button>
+                    <button class="flex-pill" onclick="selFlexLen(this, 'Week')">Week</button>
+                    <button class="flex-pill" onclick="selFlexLen(this, 'Month')">Month</button>
+                </div>
+                <div class="flex-section-title">When do you want to go?</div>
+                <div class="flex-month-grid">
+                    <div class="flex-month-card" onclick="selFlexMonth(this, 'April')"><div class="flex-month-icon">📅</div>April</div>
+                    <div class="flex-month-card" onclick="selFlexMonth(this, 'May')"><div class="flex-month-icon">📅</div>May</div>
+                    <div class="flex-month-card" onclick="selFlexMonth(this, 'June')"><div class="flex-month-icon">📅</div>June</div>
+                    <div class="flex-month-card" onclick="selFlexMonth(this, 'July')"><div class="flex-month-icon">📅</div>July</div>
+                    <div class="flex-month-card" onclick="selFlexMonth(this, 'August')"><div class="flex-month-icon">📅</div>August</div>
+                </div>
+            </div>
+        </div>
+      </div>
+
+      <div class="search-divider"></div>
+
+      <div class="search-field" id="sf-who">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        <div>
+          <div class="search-field-label">Who</div>
+          <div class="search-field-val" id="val-who">Add guests</div>
+        </div>
+
+        <div class="dropdown-menu dropdown-who">
+           <div class="guest-row">
+              <div><div class="g-info-title">Adults</div><div class="g-info-sub">Ages 13 or above</div></div>
+              <div class="g-controls">
+                 <button class="g-btn" onclick="updateGuest('adult', -1)" id="btn-adult-minus" disabled>−</button>
+                 <span class="g-count" id="count-adult">0</span>
+                 <button class="g-btn" onclick="updateGuest('adult', 1)">+</button>
+              </div>
+           </div>
+           <div class="guest-row">
+              <div><div class="g-info-title">Children</div><div class="g-info-sub">Ages 2–12</div></div>
+              <div class="g-controls">
+                 <button class="g-btn" onclick="updateGuest('child', -1)" id="btn-child-minus" disabled>−</button>
+                 <span class="g-count" id="count-child">0</span>
+                 <button class="g-btn" onclick="updateGuest('child', 1)">+</button>
+              </div>
+           </div>
+           <div class="guest-row">
+              <div><div class="g-info-title">Infants</div><div class="g-info-sub">Under 2</div></div>
+              <div class="g-controls">
+                 <button class="g-btn" onclick="updateGuest('infant', -1)" id="btn-infant-minus" disabled>−</button>
+                 <span class="g-count" id="count-infant">0</span>
+                 <button class="g-btn" onclick="updateGuest('infant', 1)">+</button>
+              </div>
+           </div>
+        </div>
+      </div>
+
+      <div class="search-divider"></div>
+
+      <div class="search-field" id="sf-budget">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+        <div style="width: 100%;">
+          <div class="search-field-label">Budget</div>
+          <input type="text" class="custom-input" id="val-budget" placeholder="Set Limit" autocomplete="off">
+        </div>
+
+        <div class="dropdown-menu dropdown-budget">
+           <div class="dd-title">Max Budget Per Person</div>
+           <div class="budget-opt" onclick="selectBudget('Under ₹5,000')">🏕️ Under ₹5,000 (Budget)</div>
+           <div class="budget-opt" onclick="selectBudget('₹5,000 - ₹15,000')">🎒 ₹5,000 - ₹15,000 (Standard)</div>
+           <div class="budget-opt" onclick="selectBudget('₹15,000 - ₹30,000')">⭐ ₹15,000 - ₹30,000 (Premium)</div>
+           <div class="budget-opt" onclick="selectBudget('Any Budget')">💎 Any Budget (Luxury)</div>
+        </div>
+      </div>
+      
+      <button class="search-btn" onclick="generateLLMPrompt()">
+        <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      </button>
+    </div>
+  </div>
+</section>
+
+<div class="stats-bar">
+  <div class="stat-item reveal"><span class="stat-num">LLM</span><div class="stat-label">Powered Engine</div></div>
+  <div class="stat-item reveal delay-1"><span class="stat-num">1000+</span><div class="stat-label">Curated Destinations</div></div>
+  <div class="stat-item reveal delay-2"><span class="stat-num">100%</span><div class="stat-label">Budget Optimized</div></div>
+</div>
+
+<script>
+  /* -----------------------------------------------------------
+     1. ROBUST SCROLL REVEAL
+  ----------------------------------------------------------- */
+  try {
+      const revealEls = document.querySelectorAll('.reveal, .reveal-left, .reveal-right');
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(e => {
+          if (e.isIntersecting) {
+            e.target.classList.add('visible');
+            observer.unobserve(e.target);
+          }
+        });
+      }, { threshold: 0.1 });
+      revealEls.forEach(el => observer.observe(el));
+      setTimeout(() => { revealEls.forEach(el => el.classList.add('visible')); }, 2500);
+  } catch(e) {}
+
+  /* -----------------------------------------------------------
+     2. DYNAMIC CALENDAR AUTO-GENERATOR
+  ----------------------------------------------------------- */
+  function generateCalendar() {
+      const today = new Date();
+      const currentMonth = today.getMonth(); 
+      const currentYear = today.getFullYear();
+      const currentDate = today.getDate();
+
+      let nextMonth = currentMonth + 1;
+      let nextYear = currentYear;
+      if (nextMonth > 11) {
+          nextMonth = 0;
+          nextYear++;
+      }
+
+      const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+      const daysHeader = '<div class="cal-day-header">S</div><div class="cal-day-header">M</div><div class="cal-day-header">T</div><div class="cal-day-header">W</div><div class="cal-day-header">T</div><div class="cal-day-header">F</div><div class="cal-day-header">S</div>';
+
+      function buildMonthHTML(month, year, isCurrentMonth) {
+          let html = `<div class="cal-month-title">${monthNames[month]} ${year}</div>`;
+          html += `<div class="cal-grid">${daysHeader}`;
+
+          const firstDay = new Date(year, month, 1).getDay();
+          const daysInMonth = new Date(year, month + 1, 0).getDate();
+          const monthPrefix = monthNames[month].substring(0, 3).toLowerCase();
+
+          for (let i = 0; i < firstDay; i++) {
+              html += `<div></div>`;
+          }
+
+          for (let i = 1; i <= daysInMonth; i++) {
+              let isDisabled = isCurrentMonth && (i < currentDate);
+              let classNames = isDisabled ? "cal-day disabled" : "cal-day";
+              let clickEvent = isDisabled ? "" : `onclick="selectDateRange(this, '${i} ${monthNames[month].substring(0,3)}', '${monthPrefix}-${i}')"`;
+
+              html += `<div class="cal-day-cell" id="cell-${monthPrefix}-${i}">
+                          <div class="${classNames}" ${clickEvent}>${i}</div>
+                       </div>`;
+          }
+          html += `</div>`; 
+          return html;
+      }
+
+      const monthsWrapper = document.querySelector('.cal-months-wrapper');
+      if (monthsWrapper) {
+          monthsWrapper.innerHTML = `
+              <div class="cal-month">${buildMonthHTML(currentMonth, currentYear, true)}</div>
+              <div class="cal-month">${buildMonthHTML(nextMonth, nextYear, false)}</div>
+          `;
+      }
+  }
+  generateCalendar();
+
+  /* -----------------------------------------------------------
+     3. AIRBNB DROPDOWN LOGIC
+  ----------------------------------------------------------- */
+  const searchFields = document.querySelectorAll('.search-field');
+  searchFields.forEach(field => {
+    field.addEventListener('click', (e) => {
+      e.stopPropagation();
+      searchFields.forEach(f => { if(f !== field) f.classList.remove('active'); });
+      field.classList.toggle('active');
+      const input = field.querySelector('input');
+      if(input) input.focus();
+    });
+    const menu = field.querySelector('.dropdown-menu');
+    if(menu) menu.addEventListener('click', e => e.stopPropagation());
+  });
+  document.addEventListener('click', () => {
+    searchFields.forEach(field => field.classList.remove('active'));
+  });
+
+  function selectOrigin(loc) {
+    document.getElementById('val-origin').value = loc;
+    document.getElementById('sf-origin').classList.remove('active');
+  }
+
+  function selectLocation(loc) {
+    document.getElementById('val-where').value = loc;
+    document.getElementById('sf-where').classList.remove('active');
+  }
+
+  let startDate = null;
+  let endDate = null;
+
+  function switchWhenTab(tab) {
+    document.getElementById('tab-dates').classList.remove('active');
+    document.getElementById('tab-flex').classList.remove('active');
+    document.getElementById('panel-dates').style.display = 'none';
+    document.getElementById('panel-flex').style.display = 'none';
+    
+    if(tab === 'dates') {
+        document.getElementById('tab-dates').classList.add('active');
+        document.getElementById('panel-dates').style.display = 'block';
+    } else {
+        document.getElementById('tab-flex').classList.add('active');
+        document.getElementById('panel-flex').style.display = 'block';
+    }
+  }
+
+  function selectDateRange(elem, dateStr, cellId) {
+      if(!startDate || (startDate && endDate)) {
+          document.querySelectorAll('.cal-day').forEach(el => el.classList.remove('selected'));
+          document.querySelectorAll('.cal-day-cell').forEach(el => el.classList.remove('in-range', 'range-start', 'range-end'));
+          startDate = { elem, dateStr, cellId };
+          endDate = null;
+          elem.classList.add('selected');
+          document.getElementById('cell-'+cellId).classList.add('range-start');
+          document.getElementById('val-when').innerText = dateStr;
+      } else {
+          endDate = { elem, dateStr, cellId };
+          elem.classList.add('selected');
+          document.getElementById('cell-'+cellId).classList.add('range-end');
+          document.getElementById('val-when').innerText = `${startDate.dateStr} - ${endDate.dateStr}`;
+          document.getElementById('sf-when').classList.remove('active');
+      }
+      document.getElementById('val-when').style.color = '#1a1a1a';
+  }
+
+  let flexLength = "Weekend";
+  let flexMonth = "";
+  function selFlexLen(elem, val) {
+      document.querySelectorAll('.flex-pill').forEach(el => el.classList.remove('active'));
+      elem.classList.add('active');
+      flexLength = val;
+      updateFlexText();
+  }
+  function selFlexMonth(elem, val) {
+      document.querySelectorAll('.flex-month-card').forEach(el => el.classList.remove('active'));
+      elem.classList.add('active');
+      flexMonth = val;
+      updateFlexText();
+      setTimeout(() => document.getElementById('sf-when').classList.remove('active'), 400);
+  }
+  function updateFlexText() {
+      if(flexMonth) {
+          document.getElementById('val-when').innerText = `A ${flexLength} in ${flexMonth}`;
+          document.getElementById('val-when').style.color = '#1a1a1a';
+      }
+  }
+
+  const guests = { adult: 0, child: 0, infant: 0 };
+  function updateGuest(type, change) {
+    let newVal = Math.max(0, guests[type] + change);
+    guests[type] = newVal;
+    document.getElementById(`count-${type}`).innerText = newVal;
+    document.getElementById(`btn-${type}-minus`).disabled = (newVal === 0);
+    
+    let total = guests.adult + guests.child;
+    let text = "Add guests";
+    if(total > 0) {
+        text = `${total} guest${total > 1 ? 's' : ''}`;
+        if(guests.infant > 0) text += `, ${guests.infant} infant${guests.infant > 1 ? 's' : ''}`;
+        document.getElementById('val-who').style.color = '#1a1a1a';
+    } else {
+        document.getElementById('val-who').style.color = '#666';
+    }
+    document.getElementById('val-who').innerText = text;
+  }
+
+  function selectBudget(val) {
+      document.querySelectorAll('.budget-opt').forEach(el => el.classList.remove('active'));
+      event.target.classList.add('active');
+      document.getElementById('val-budget').value = val;
+      document.getElementById('sf-budget').classList.remove('active');
+  }
+
+  /* -----------------------------------------------------------
+     4. SEAMLESS DUAL-VIDEO BUFFER LOGIC
+  ----------------------------------------------------------- */
+  const video1 = document.getElementById('heroVideo1');
+  const video2 = document.getElementById('heroVideo2');
+  const videoPlaylist = ['../test2.mp4', '../test3.mp4', '../rain1.mp4'];
+  let currentVideoIndex = 0; 
+  let activeVideo = 1; 
+  const transitionTime = 5000; 
+  
+  video1.style.transition = 'opacity 1s ease-in-out';
+  video2.style.transition = 'opacity 1s ease-in-out';
+  video2.src = videoPlaylist[1];
+  video2.load();
+
+  setInterval(() => {
+    let nextVideoIndex = (currentVideoIndex + 1) % videoPlaylist.length;
+    let preloadIndex = (currentVideoIndex + 2) % videoPlaylist.length;
+
+    if (activeVideo === 1) {
+      video2.play().then(() => {
+        video2.style.opacity = 1;
+        video2.style.zIndex = 1;
+        video1.style.opacity = 0;
+        video1.style.zIndex = 0;
+        activeVideo = 2;
+        currentVideoIndex = nextVideoIndex;
+        setTimeout(() => { video1.src = videoPlaylist[preloadIndex]; video1.load(); }, 1000); 
+      }).catch(err => console.log("Video Play Error:", err));
+    } else {
+      video1.play().then(() => {
+        video1.style.opacity = 1;
+        video1.style.zIndex = 1;
+        video2.style.opacity = 0;
+        video2.style.zIndex = 0;
+        activeVideo = 1;
+        currentVideoIndex = nextVideoIndex;
+        setTimeout(() => { video2.src = videoPlaylist[preloadIndex]; video2.load(); }, 1000);
+      }).catch(err => console.log("Video Play Error:", err));
+    }
+  }, transitionTime);
+
+  /* ==========================================================================
+     5. LLM DATA COMPILER - REDIRECT TO ITINERARY.HTML
+     ========================================================================== */
+  function generateLLMPrompt() {
+      const origin = document.getElementById('val-origin').value.trim();
+      const loc = document.getElementById('val-where').value.trim();
+      const timing = document.getElementById('val-when').innerText;
+      const who = document.getElementById('val-who').innerText;
+      const budget = document.getElementById('val-budget').value.trim();
+
+      if(loc === "") { 
+          alert("Please select or type a destination first."); 
+          return; 
+      }
+
+      const llmData = {
+          "origin": origin !== "" ? origin : "Not Specified",
+          "destination": loc !== "" ? loc : "Not Specified",
+          "timing": timing !== "Add dates" ? timing : "Anytime",
+          "guests": guests,
+          "budget_limit": budget !== "" ? budget : "Standard"
+      };
+
+      // 1. Data ko browser ke local storage mein save karo
+      localStorage.setItem('travelGenieRequest', JSON.stringify(llmData));
+
+      // 2. Button par loading spinner dikhao
+      document.querySelector('.search-btn').innerHTML = `<div style="width:20px; height:20px; border:3px solid white; border-top:3px solid transparent; border-radius:50%; animation: spin 1s linear infinite;"></div>`;
+      
+      // 3. Naye UI wale page (itinerary.html) par bhej do
+      setTimeout(() => {
+          window.location.href = 'itinerary.html';
+      }, 800); 
+  }
+</script>
+</body>
+</html>
